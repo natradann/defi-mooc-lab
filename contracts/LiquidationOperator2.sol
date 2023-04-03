@@ -132,7 +132,7 @@ interface IUniswapV2Pair {
 
 // ----------------------IMPLEMENTATION------------------------------
 
-contract LiquidationOperator is IUniswapV2Callee {
+contract LiquidationOperator2 is IUniswapV2Callee {
     uint8 public constant health_factor_decimals = 18;
 
     // TODO: define constants used in the contract including ERC-20 tokens, Uniswap Pairs, Aave lending pools, etc. */
@@ -148,7 +148,7 @@ contract LiquidationOperator is IUniswapV2Callee {
     ILendingPool constant lendingPool = ILendingPool(0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9);
 
     address constant liquidationTarget = 0x59CE4a2AC5bC3f5F225439B2993b86B42f6d3e9F;
-    uint Debt_USDT;
+    uint debt_USDT;
 
     // END TODO
 
@@ -193,7 +193,7 @@ contract LiquidationOperator is IUniswapV2Callee {
     constructor() {
         // TODO: (optional) initialize your contract
 
-        uniswapV2Pair_WBTC_USDT = IUniswapV2Pair(uniswapV2Factory.getPair(address(WETH), address(USDT))); // Pool1
+        uniswapV2Pair_WBTC_USDT = IUniswapV2Pair(uniswapV2Factory.getPair(address(WBTC), address(USDT))); // Pool1
         uniswapV2Pair_WBTC_WETH = IUniswapV2Pair(uniswapV2Factory.getPair(address(WBTC), address(WETH))); // Pool2
         //debt_USDT = 2916378221684;
         
@@ -207,7 +207,7 @@ contract LiquidationOperator is IUniswapV2Callee {
     // END TODO
 
     // required by the testing script, entry for your liquidation call
-    function operate(uint256 debt_USDT) external {
+    function operate(uint256 debt_USDT_input) external {
         // TODO: implement your liquidation logic
 
         // 0. security checks and initializing variables
@@ -229,7 +229,7 @@ contract LiquidationOperator is IUniswapV2Callee {
             ltv,
             healthFactor
         ) = lendingPool.getUserAccountData(liquidationTarget);
-        Debt_USDT = debt_USDT;
+        debt_USDT = debt_USDT_input;
 
         require(healthFactor < (10 ** health_factor_decimals), "Cannot liquidate; health factor must be below 1" );
 
@@ -239,7 +239,7 @@ contract LiquidationOperator is IUniswapV2Callee {
         // we should borrow USDT, liquidate the target user and get the WBTC, then swap WBTC to repay uniswap
         // (please feel free to develop other workflows as long as they liquidate the target user successfully)
 
-        uniswapV2Pair_WBTC_USDT.swap(0, Debt_USDT, address(this), "$");
+        uniswapV2Pair_WBTC_USDT.swap(0, debt_USDT, address(this), "$");
 
         // 3. Convert the profit into ETH and send back to sender
 
@@ -281,10 +281,7 @@ contract LiquidationOperator is IUniswapV2Callee {
 
         // 2.3 repay
         
-        uint repay_WBTC = getAmountIn(Debt_USDT, reserve_WBTC_Pool1, reserve_USDT_Pool1);
-        console.log("debt=",Debt_USDT);
-        console.log("\nreservein=", reserve_WBTC_Pool1);
-        console.log("\nreserveOut=", reserve_USDT_Pool1);
+        uint repay_WBTC = getAmountIn(debt_USDT, reserve_WBTC_Pool1, reserve_USDT_Pool1);
         console.log("Repay_WBTC = ", repay_WBTC);
         WBTC.transfer(address(uniswapV2Pair_WBTC_USDT), repay_WBTC);
 
